@@ -118,7 +118,8 @@ async function load(fs){let m='';for(const f of fs){const r=ingest(await f.array
 function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)]));a.download='tim-area-backup.json';a.click()}
 async function imp(f){if(!f)return;try{S=Object.assign(S,JSON.parse(await f.text()));save();fillM();R()}catch(e){alert('File non valido')}}
 /* Sync Firestore REST (gratuito, piano Spark) */
-async function sync(q){const c=S.cfg;if(!q){c.pid=$('#fb1').value.trim();c.key=$('#fb2').value.trim();c.code=$('#fb3').value.trim();c.em=$('#fb4').value.trim()}save();const pw=q?'':($('#fb5')||{}).value;const out=t=>{const e=$('#sm');if(e)e.textContent=t};
+async function sync(q){if(sync.b)return;sync.b=1;try{await sync0(q)}finally{sync.b=0}}
+async function sync0(q){const c=S.cfg;if(!q){c.pid=$('#fb1').value.trim();c.key=$('#fb2').value.trim();c.code=$('#fb3').value.trim();c.em=$('#fb4').value.trim()}save();const pw=q?'':($('#fb5')||{}).value;const out=t=>{const e=$('#sm');if(e)e.textContent=t};
  if(!c.pid||!c.key||!c.code||!c.em)return out('Compila tutti i campi');const B=`https://firestore.googleapis.com/v1/projects/${c.pid}/databases/(default)/documents/tim_${c.code}`,K='key='+c.key;
  try{out('Accesso…');const H={Authorization:'Bearer '+await getTok(pw),'Content-Type':'application/json'};out('Scarico…');let tok='',docs=[];do{const r=await fetch(`${B}?pageSize=300&${K}${tok?'&pageToken='+tok:''}`,{headers:H});if(!r.ok)throw new Error(r.status);const j=await r.json();(j.documents||[]).forEach(d=>docs.push([d.name.split('/').pop(),JSON.parse(d.fields.d.stringValue)]));tok=j.nextPageToken}while(tok);
   for(const [id,v] of docs){if(id=='sh')Object.assign(S.shops,v,S.shops);else if(id=='pl'){for(const k in v)if(!S.plans[k]||v[k].u>S.plans[k].u)S.plans[k]=v[k]}else{const ty=id.split('_')[0];if(!S[ty])continue;const mp=new Map(S[ty].map(x=>[x.k,x]));v.forEach(r=>{const o=mp.get(r.k);if(!o||r.u>o.u)mp.set(r.k,r)});S[ty]=[...mp.values()]}}
@@ -135,4 +136,5 @@ function fillM(){const ms=months();$('#mk').innerHTML='<option value="">Tutti i 
 function R(){$('#nv').innerHTML=TABS.map(([k,i,l])=>`<button class="${V.tab==k?'on':''}" onclick="V.tab='${k}';V.shop=null;R()"><span>${i}</span>${l}</button>`).join('');
  $('#v').innerHTML=V.tab=='home'?home():V.tab=='shops'?(V.shop?shop(V.shop):shops()):V.tab=='cross'?cross():V.tab=='plan'?plan():data()}
 fillM();R();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+const auto=()=>{if(S.cfg.rt&&S.cfg.pid&&navigator.onLine)sync(1)};auto();document.addEventListener('visibilitychange',()=>{if(!document.hidden)auto()});
 </script></body></html>
