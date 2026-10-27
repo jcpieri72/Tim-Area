@@ -1,0 +1,138 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0033A0"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><title>TIM Area Manager</title>
+<style>
+:root{--b:#0033A0;--b2:#001F63;--r:#E4002B;--bg:#EEF2FA;--t:#14213D;--m:#5B6B8C;--ok:#1B9E5A;--w:#E8A200;--bad:#D6283B}
+*{box-sizing:border-box}body{margin:0;font:15px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--t);padding-bottom:64px}
+header{background:linear-gradient(135deg,var(--b),var(--b2));color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center;position:sticky;top:0;z-index:5;border-bottom:3px solid var(--r)}
+header b{font-size:17px;flex:1}header select{padding:6px;border-radius:8px;border:0;font-size:14px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;box-shadow:0 -2px 8px #0002;z-index:6}
+nav button{flex:1;border:0;background:0;padding:8px 2px;font-size:11px;color:var(--m);display:flex;flex-direction:column;align-items:center;gap:2px}nav button span{font-size:19px}nav .on{color:var(--b);font-weight:700;border-top:3px solid var(--r)}
+main{padding:12px;max-width:1300px;margin:auto}
+.g{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}.g2{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.c{background:#fff;border-radius:14px;padding:12px;box-shadow:0 1px 4px #0001}.c h3{margin:0 0 8px;font-size:15px;color:var(--b)}
+.k{border-left:4px solid var(--b)}.k small{color:var(--m);display:block}.k b{font-size:24px}.k.r{border-color:var(--r)}
+.row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #eef}.row:last-child{border:0}.row .n{flex:1.2;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{flex:2;background:#E3E9F6;border-radius:6px;height:14px;position:relative;overflow:hidden}.bar i{display:block;height:100%;background:var(--b);border-radius:6px}
+.v{min-width:44px;text-align:right;font-weight:700;font-size:13px}.ok{color:var(--ok)}.w{color:var(--w)}.bad{color:var(--bad)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:6px 7px;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:#fff;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+th{background:var(--b);color:#fff;cursor:pointer;position:sticky;top:0}tr:nth-child(even) td{background:#F6F8FD}.sc{overflow:auto;max-height:70vh;border-radius:10px}
+button.p,select,input{font:inherit;padding:8px 10px;border-radius:10px;border:1px solid #C9D3EA;background:#fff}button.p{background:var(--b);color:#fff;border:0;font-weight:600}button.p.r{background:var(--r)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.chips button{border:1px solid var(--b);background:#fff;color:var(--b);border-radius:20px;padding:5px 11px}
+.al{padding:7px 9px;border-left:4px solid var(--w);background:#FFF8E5;border-radius:8px;margin:5px 0;font-size:13px}.al.bad{border-color:var(--bad);background:#FDECEE;color:var(--t)}
+.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}.f label{font-size:12px;color:var(--m);display:block}.f input{width:100%}
+@media(min-width:700px){body{padding:0 0 0 84px}nav{top:0;bottom:0;right:auto;width:84px;flex-direction:column;justify-content:flex-start;padding-top:70px}nav button{flex:0;padding:14px 2px}header{margin-left:-84px;padding-left:98px}.k b{font-size:28px}}
+</style></head><body>
+<header><b>TIM · Area Manager</b><select id="mk" onchange="V.mk=this.value;R()"></select></header>
+<main id="v"></main>
+<nav id="nv"></nav>
+<script>
+const $=s=>document.querySelector(s),LS='timarea1',esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S={nip:[],en:[],tp:[],shops:{},plans:{},cfg:{agent:'Pieri',pid:'',key:'',code:'',em:'',rt:''}};
+try{Object.assign(S,JSON.parse(localStorage.getItem(LS)||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){alert('Memoria piena')}};
+let V={tab:'home',mk:'',shop:null,num:'en',den:'fisso',sort:'fisso',dir:-1,pm:''};
+const MET={nip:'NIP',ull:'ULL',fisso:'Fissi (NIP+ULL)',luce:'Luce',gas:'Gas',en:'Energia (Luce+Gas)',tp:'Telepass',anF:'Annullati fissi',anE:'Annullati energia',totF:'Ordini fissi totali',totE:'Ordini energia totali'};
+const TABS=[['home','🏠','Home'],['shops','🏪','Negozi'],['cross','🔀','Incroci'],['plan','🎯','Piano'],['data','⚙️','Dati']];
+const nf=n=>n==null?'–':Number(n).toLocaleString('it-IT'),pc=(n,d)=>d?Math.round(n/d*1000)/10:null,fp=x=>x==null?'–':x.toLocaleString('it-IT')+'%';
+/* CSV */
+function csv(t){const r=[];let w=[],c='',q=0;for(let i=0;i<t.length;i++){const h=t[i];if(q){if(h=='"'){if(t[i+1]=='"'){c+='"';i++}else q=0}else c+=h}else if(h=='"')q=1;else if(h==';'){w.push(c);c=''}else if(h=='\n'){w.push(c);r.push(w);w=[];c=''}else if(h!='\r')c+=h}if(c||w.length){w.push(c);r.push(w)}return r}
+const dt=s=>{const m=(s||'').match(/(\d\d)\/(\d\d)\/(\d{4})/);return m?`${m[3]}-${m[2]}-${m[1]}`:''};
+function ingest(buf){let t;try{t=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch(e){t=new TextDecoder('windows-1252').decode(buf)}
+ t=t.replace(/^\uFEFF/,'');const r=csv(t),H={};r[0].forEach((h,i)=>H[h.trim()]=i);
+ const ty=H.tipoOrigine!=null?'nip':H.Nome_offerta!=null?'en':H.Codice_Contratto_Telepass!=null?'tp':null;if(!ty)return{ty:null,n:0};
+ const ag=(S.cfg.agent||'').toLowerCase(),u=Date.now(),mp=new Map(S[ty].map(x=>[x.k,x]));let n=0;
+ for(const a of r.slice(1)){const g=c=>(a[H[c]]||'').trim();if(a.length<10||(ag&&!g('VenditoreCP').toLowerCase().includes(ag)))continue;
+  const s=g('Codicepdv');if(!s)continue;S.shops[s]={n:g('RagioneSociale'),c:g('pdv_Comune'),v:g('Venditore')};let o;
+  if(ty=='nip'){const st=g('StatoAggregatoIncentivazione');o={k:g('CodOrdine'),s,d:dt(g('DataCreazioneOrdine')),t:g('tipoOrigine'),x:/^(Annullato|Scartato)/i.test(st)?1:0,v:g('tipologiaservizio'),o:g('GruppoOfferta'),st}}
+  else if(ty=='en'){const st=g('StatoEnergia');o={k:g('Codice_Contratto_Poste'),s,d:dt(g('Data_Creazione_Ordine')),t:/gas/i.test(g('Nome_offerta'))?'Gas':'Luce',x:/annull/i.test(st)?1:0,st}}
+  else{const st=g('Stato_Contratto');o={k:g('Codice_Contratto_Telepass'),s,d:dt(g('DataInserimentoTelepass')),t:g('Prodotto'),x:/annull/i.test(st)?1:0,st}}
+  if(!o.k||!o.d)continue;o.u=u;mp.set(o.k,o);n++}
+ S[ty]=[...mp.values()];save();return{ty,n}}
+/* Aggregazione */
+const months=()=>[...new Set([...S.nip,...S.en,...S.tp].map(r=>r.d.slice(0,7)))].sort();
+function agg(mk){const o={};const g=c=>o[c]||(o[c]={nip:0,ull:0,fisso:0,luce:0,gas:0,en:0,tp:0,anF:0,anE:0,totF:0,totE:0});const ip=r=>!mk||r.d.startsWith(mk);
+ Object.keys(S.shops).forEach(g);
+ S.nip.forEach(r=>{if(!ip(r))return;const a=g(r.s);a.totF++;if(r.x)a.anF++;else{a[r.t=='ULL'?'ull':'nip']++;a.fisso++}});
+ S.en.forEach(r=>{if(!ip(r))return;const a=g(r.s);a.totE++;if(r.x)a.anE++;else{a[r.t=='Gas'?'gas':'luce']++;a.en++}});
+ S.tp.forEach(r=>{if(ip(r))if(!r.x)g(r.s).tp++});return o}
+const tot=o=>Object.values(o).reduce((a,b)=>{for(const k in b)a[k]=(a[k]||0)+b[k];return a},{});
+const nm=c=>{const s=S.shops[c]||{};return esc((s.n||c)+' · '+(s.c||''))};
+const cl=(v,avg)=>v==null||avg==null?'':v>=avg?'ok':v>=avg*.7?'w':'bad';
+const bar=(v,m,c)=>`<div class="bar"><i style="width:${m?Math.max(2,v/m*100):0}%;${c?'background:'+c:''}"></i></div>`;
+const maxDate=()=>[...S.nip,...S.en,...S.tp].reduce((m,r)=>r.d>m?r.d:m,'');
+/* Viste */
+function home(){const A=agg(V.mk),T=tot(A),ids=Object.keys(A).filter(c=>A[c].totF+A[c].totE+A[c].tp>0).sort((a,b)=>A[b].fisso-A[a].fisso);
+ if(!ids.length)return`<div class="c"><h3>Nessun dato</h3>Vai su ⚙️ Dati e carica i CSV (energia, nip_ull, telepass).</div>`;
+ const K=(l,v,x)=>`<div class="c k ${x||''}"><small>${l}</small><b>${v}</b></div>`,mx=k=>Math.max(...ids.map(c=>A[c][k]),1);
+ const al=alerts(A,ids);
+ return`<div class="g">${K('Fissi (NIP+ULL)',nf(T.fisso))}${K('NIP',nf(T.nip))}${K('ULL',nf(T.ull))}${K('Luce',nf(T.luce),'r')}${K('Gas',nf(T.gas),'r')}${K('Telepass',nf(T.tp))}${K('Energia ogni 100 fissi',nf(pc(T.en,T.fisso)),'r')}${K('Telepass ogni 100 fissi',nf(pc(T.tp,T.fisso)))}${K('% annullati fissi',fp(pc(T.anF,T.totF)))}${K('% annullati energia',fp(pc(T.anE,T.totE)))}</div>
+ <div class="g2" style="margin-top:12px"><div class="c"><h3>⚠️ Da controllare</h3>${al.join('')||'<span class="ok">Tutto nella norma</span>'}</div>
+ <div class="c"><h3>📈 Trend mensile</h3>${months().map(m=>{const t=tot(agg(m));return`<div class="row"><span class="n">${m}</span><span class="v">${t.fisso}</span><small>fissi</small><span class="v">${t.en}</span><small>en.</small><span class="v">${t.tp}</span><small>tp</small></div>`}).join('')}</div></div>
+ <div class="g2" style="margin-top:12px">${[['fisso','Fissi (NIP+ULL)',''],['en','Energia','var(--r)'],['tp','Telepass','#00A3E0']].map(([k,l,c])=>`<div class="c"><h3>${l} per negozio</h3>${[...ids].sort((a,b)=>A[b][k]-A[a][k]).map(i=>`<div class="row" onclick="go('${i}')"><span class="n">${nm(i)}</span>${bar(A[i][k],mx(k),c)}<span class="v">${A[i][k]}</span></div>`).join('')}</div>`).join('')}</div>`}
+function alerts(A,ids){const o=[],md=maxDate(),last={};[...S.nip,...S.en,...S.tp].forEach(r=>{if(r.d>(last[r.s]||''))last[r.s]=r.d});
+ ids.forEach(c=>{const a=A[c],n=nm(c),L=`<div class="al %C" onclick="go('${c}')"><b>${n}</b>: `;
+  if(a.fisso>=10&&a.en==0)o.push(L.replace('%C','bad')+`0 energia a fronte di ${a.fisso} fissi</div>`);
+  if(a.fisso>=10&&a.tp==0)o.push(L.replace('%C','')+`0 Telepass a fronte di ${a.fisso} fissi</div>`);
+  if(a.totF>=8&&pc(a.anF,a.totF)>=25)o.push(L.replace('%C','bad')+`annullati fissi ${fp(pc(a.anF,a.totF))}</div>`);
+  if(a.totE>=8&&pc(a.anE,a.totE)>=25)o.push(L.replace('%C','bad')+`annullati energia ${fp(pc(a.anE,a.totE))}</div>`);
+  if(last[c]&&(new Date(md)-new Date(last[c]))/864e5>14)o.push(L.replace('%C','')+`nessun ordine dal ${last[c].split('-').reverse().join('/')}</div>`)});return o.slice(0,40)}
+function shops(){const A=agg(V.mk),T=tot(A);const cols=[['fisso','Fissi'],['nip','NIP'],['ull','ULL'],['luce','Luce'],['gas','Gas'],['tp','Tp'],['enf','En/Fissi'],['tpf','Tp/Fissi'],['an','Ann.%']];
+ const val=(c,k)=>{const a=A[c];return k=='enf'?pc(a.en,a.fisso):k=='tpf'?pc(a.tp,a.fisso):k=='an'?pc(a.anF+a.anE,a.totF+a.totE):a[k]};
+ const ids=Object.keys(A).sort((a,b)=>((val(b,V.sort)??-1)-(val(a,V.sort)??-1))*-V.dir*-1);
+ const av={enf:pc(T.en,T.fisso),tpf:pc(T.tp,T.fisso)};
+ return`<div class="c"><h3>Tutti i negozi · tocca l'intestazione per ordinare</h3><div class="sc"><table><tr><th>Negozio</th>${cols.map(([k,l])=>`<th onclick="V.sort='${k}';V.dir=-V.dir||-1;R()">${l}${V.sort==k?(V.dir<0?' ▼':' ▲'):''}</th>`).join('')}</tr>
+ ${ids.map(c=>`<tr onclick="go('${c}')"><td>${nm(c)}</td>${cols.map(([k])=>{const v=val(c,k);return`<td class="${k=='enf'||k=='tpf'?cl(v,av[k]):k=='an'&&v>=25?'bad':''}">${k=='enf'||k=='tpf'||k=='an'?fp(v):v}</td>`}).join('')}</tr>`).join('')}
+ <tr><td><b>TOTALE</b></td><td><b>${T.fisso}</b></td><td>${T.nip}</td><td>${T.ull}</td><td>${T.luce}</td><td>${T.gas}</td><td>${T.tp}</td><td>${fp(av.enf)}</td><td>${fp(av.tpf)}</td><td>${fp(pc(T.anF+T.anE,T.totF+T.totE))}</td></tr></table></div></div>`}
+function shop(c){const A=agg(V.mk),a=A[c],T=tot(A),s=S.shops[c]||{};
+ const mm=months().map(m=>[m,agg(m)[c]]),sv={};S.nip.filter(r=>r.s==c&&!r.x&&(!V.mk||r.d.startsWith(V.mk))).forEach(r=>{sv[r.v]=(sv[r.v]||0)+1});
+ const ex={};S.nip.filter(r=>r.s==c&&!r.x&&(!V.mk||r.d.startsWith(V.mk))).forEach(r=>{ex[r.o]=(ex[r.o]||0)+1});
+ const R_=(l,v,avg)=>`<div class="row"><span class="n">${l}</span><span class="v ${cl(v,avg)}">${fp(v)}</span><small>media area ${fp(avg)}</small></div>`;
+ return`<button class="p" onclick="V.shop=null;R()">← Tutti i negozi</button><h2>${esc(s.n)} <small>${esc(s.c)} · cod. ${c}</small></h2>
+ <div class="g"><div class="c k"><small>Fissi</small><b>${a.fisso}</b></div><div class="c k"><small>NIP / ULL</small><b>${a.nip} / ${a.ull}</b></div><div class="c k r"><small>Luce / Gas</small><b>${a.luce} / ${a.gas}</b></div><div class="c k"><small>Telepass</small><b>${a.tp}</b></div></div>
+ <div class="g2" style="margin-top:12px"><div class="c"><h3>Confronto con la media area</h3>${R_('Energia ogni 100 fissi',pc(a.en,a.fisso),pc(T.en,T.fisso))}${R_('Luce ogni 100 fissi',pc(a.luce,a.fisso),pc(T.luce,T.fisso))}${R_('Gas ogni 100 fissi',pc(a.gas,a.fisso),pc(T.gas,T.fisso))}${R_('Telepass ogni 100 fissi',pc(a.tp,a.fisso),pc(T.tp,T.fisso))}${R_('ULL su fissi',pc(a.ull,a.fisso),pc(T.ull,T.fisso))}<div class="row"><span class="n">Annullati fissi / energia</span><span class="v">${fp(pc(a.anF,a.totF))} / ${fp(pc(a.anE,a.totE))}</span></div></div>
+ <div class="c"><h3>Andamento mensile</h3><table><tr><th>Mese</th><th>Fissi</th><th>Luce</th><th>Gas</th><th>Tp</th><th>En/Fissi</th></tr>${mm.map(([m,x])=>`<tr><td>${m}</td><td>${x.fisso}</td><td>${x.luce}</td><td>${x.gas}</td><td>${x.tp}</td><td>${fp(pc(x.en,x.fisso))}</td></tr>`).join('')}</table></div>
+ <div class="c"><h3>Mix tecnologie fissi</h3>${Object.entries(sv).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`<div class="row"><span class="n">${esc(k)}</span>${bar(v,a.fisso)}<span class="v">${v}</span></div>`).join('')}</div>
+ <div class="c"><h3>Mix offerte fisso</h3>${Object.entries(ex).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`<div class="row"><span class="n">${esc(k)}</span>${bar(v,a.fisso)}<span class="v">${v}</span></div>`).join('')}</div></div>`}
+function cross(){const A=agg(V.mk),T=tot(A),ids=Object.keys(A).filter(c=>A[c][V.den]>0),vals=ids.map(c=>[c,pc(A[c][V.num],A[c][V.den])]).sort((a,b)=>b[1]-a[1]),avg=pc(T[V.num],T[V.den]),mx=Math.max(...vals.map(v=>v[1]),1);
+ const P=[['en','fisso','Energia / Fissi'],['luce','fisso','Luce / Fissi'],['gas','fisso','Gas / Fissi'],['tp','fisso','Telepass / Fissi'],['ull','fisso','ULL / Fissi'],['anF','totF','Annullati fissi %'],['anE','totE','Annullati energia %'],['gas','luce','Gas / Luce'],['tp','en','Telepass / Energia']];
+ const sel=(id,v)=>`<select onchange="V.${id}=this.value;R()">${Object.entries(MET).map(([k,l])=>`<option value="${k}" ${k==v?'selected':''}>${l}</option>`).join('')}</select>`;
+ return`<div class="c"><h3>Incrocia due dati qualsiasi</h3><div class="chips">${P.map(([n,d,l])=>`<button onclick="V.num='${n}';V.den='${d}';R()">${l}</button>`).join('')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${sel('num',V.num)} <b>su</b> ${sel('den',V.den)}</div>
+ <p>Media area: <b>${fp(avg)}</b> · verde ≥ media, giallo ≥ 70% della media, rosso sotto.</p>${vals.map(([c,v])=>`<div class="row" onclick="go('${c}')"><span class="n">${nm(c)}</span>${bar(v,mx)}<span class="v ${cl(v,avg)}">${fp(v)}</span><small>${A[c][V.num]}/${A[c][V.den]}</small></div>`).join('')||'Nessun dato'}</div>`}
+const PF=[['t','fisso','Target fissi'],['t','en','Target energia'],['t','tp','Target Telepass']],PP=[['p','nip','€ NIP'],['p','ull','€ ULL'],['p','luce','€ Luce'],['p','gas','€ Gas'],['p','tp','€ Telepass']],PR=[['r','enf','Soglia energia/fissi %'],['r','tpf','Soglia Telepass/fissi %']];
+function plan(){const ms=months(),mk=V.pm||(V.mk||ms[ms.length-1]||new Date().toISOString().slice(0,7)),p=S.plans[mk]||{name:'',t:{},p:{},r:{}},A=agg(mk),ids=Object.keys(A).filter(c=>A[c].totF+A[c].totE+A[c].tp>0);
+ const [y,m]=mk.split('-').map(Number),dim=new Date(y,m,0).getDate(),md=maxDate(),el=md.startsWith(mk)?+md.slice(8):dim,pj=v=>Math.round(v/Math.max(el,1)*dim);
+ const inp=(g,k,l)=>`<div><label>${l}</label><input type="number" step="any" id="p_${g}_${k}" value="${p[g][k]??''}"></div>`;
+ const pay=a=>['nip','ull','luce','gas','tp'].reduce((s,k)=>s+a[k]*(+p.p[k]||0),0);
+ return`<div class="c"><h3>🎯 Piano / profilo di vendita del mese</h3><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><select onchange="V.pm=this.value;R()">${[...new Set([...ms,mk])].map(x=>`<option ${x==mk?'selected':''}>${x}</option>`).join('')}</select><input id="p_name" placeholder="Nome profilo (es. Gara Ottobre)" value="${esc(p.name)}" style="flex:1"><button class="p" onclick="savePlan('${mk}')">Salva</button><button class="p r" onclick="copyPlan('${mk}')">Copia dal mese prec.</button></div>
+ <div class="f">${[...PF,...PP,...PR].map(([g,k,l])=>inp(g,k,l)).join('')}</div><small>Target = per singolo negozio nel mese. Compensi = € per pezzo valido. Giorno ${el}/${dim} del mese.</small></div>
+ <div class="c" style="margin-top:12px"><h3>Avanzamento ${mk}${p.name?' · '+esc(p.name):''}</h3><div class="sc"><table><tr><th>Negozio</th><th>Fissi</th><th>%</th><th>Proiez.</th><th>En.</th><th>%</th><th>Proiez.</th><th>Tp</th><th>%</th><th>€ stimati</th><th>Soglie</th></tr>${ids.map(c=>{const a=A[c],t=p.t,f=(v,tg)=>tg?pc(v,tg):null,cc=(v,tg)=>v==null?'':v>=100?'ok':pj(v*tg/100)>=tg?'w':'bad',e=pc(a.en,a.fisso),q=pc(a.tp,a.fisso);
+  const fl=[(p.r.enf&&e<p.r.enf)?'En':'',(p.r.tpf&&q<p.r.tpf)?'Tp':''].filter(Boolean);
+  return`<tr><td>${nm(c)}</td><td>${a.fisso}</td><td class="${cc(f(a.fisso,t.fisso),t.fisso)}">${fp(f(a.fisso,t.fisso))}</td><td>${t.fisso?pj(a.fisso):'–'}</td><td>${a.en}</td><td class="${cc(f(a.en,t.en),t.en)}">${fp(f(a.en,t.en))}</td><td>${t.en?pj(a.en):'–'}</td><td>${a.tp}</td><td class="${cc(f(a.tp,t.tp),t.tp)}">${fp(f(a.tp,t.tp))}</td><td>${nf(Math.round(pay(a)))}</td><td class="bad">${fl.length?'⚠ '+fl.join(','):''}</td></tr>`}).join('')}</table></div><small>Proiezione = ritmo attuale esteso a fine mese. Verde ≥100% del target, giallo se la proiezione lo raggiunge, rosso altrimenti.</small></div>`}
+function savePlan(mk){const p={name:$('#p_name').value,t:{},p:{},r:{},u:Date.now()};[...PF,...PP,...PR].forEach(([g,k])=>{const v=$('#p_'+g+'_'+k).value;if(v!=='')p[g][k]=+v});S.plans[mk]=p;save();R()}
+function copyPlan(mk){const ks=Object.keys(S.plans).filter(k=>k<mk).sort();if(!ks.length)return alert('Nessun piano precedente');S.plans[mk]={...JSON.parse(JSON.stringify(S.plans[ks.pop()])),u:Date.now()};save();R()}
+function data(){const c=S.cfg,L=S.lastSync?new Date(S.lastSync).toLocaleString('it-IT'):'mai';
+ return`<div class="g2"><div class="c"><h3>📥 Carica i file CSV</h3><p>Puoi selezionare insieme energia, nip_ull e telepass. Ogni mese ricarica i nuovi estratti: i dati si aggiornano senza duplicati.</p><label>Venditore da tenere (colonna VenditoreCP)</label><input id="ag" value="${esc(c.agent)}" onchange="S.cfg.agent=this.value;save()"><br><br><input type="file" id="fl" multiple accept=".csv,.txt" onchange="load(this.files)"><p id="msg"></p>
+ <small>In memoria: ${S.nip.length} NIP/ULL · ${S.en.length} energia · ${S.tp.length} Telepass · ${Object.keys(S.shops).length} negozi · ultimo dato ${maxDate()||'–'}</small></div>
+ <div class="c"><h3>☁️ Sincronizza PC ↔ cellulare</h3><p>Gratis con Firebase (vedi LEGGIMI). Accesso protetto da email e password: solo tu leggi i dati.</p><div class="f"><div><label>Project ID</label><input id="fb1" value="${esc(c.pid)}"></div><div><label>API key</label><input id="fb2" value="${esc(c.key)}"></div><div><label>Nome archivio (qualsiasi parola)</label><input id="fb3" value="${esc(c.code)}"></div><div><label>Email Firebase</label><input id="fb4" type="email" value="${esc(c.em)}"></div><div><label>Password (la prima volta)</label><input id="fb5" type="password" autocomplete="current-password"></div></div><br><button class="p" onclick="sync()">Sincronizza ora</button> <small>Ultima: ${L}</small><p id="sm"></p></div>
+ <div class="c"><h3>💾 Backup</h3><button class="p" onclick="exp()">Esporta JSON</button> <input type="file" accept=".json" onchange="imp(this.files[0])"></div></div>`}
+async function load(fs){let m='';for(const f of fs){const r=ingest(await f.arrayBuffer());m+=r.ty?`✔ ${f.name}: ${r.n} righe (${r.ty})<br>`:`✖ ${f.name}: formato non riconosciuto<br>`}$('#msg').innerHTML=m;fillM();R();if(S.cfg.pid)sync(1)}
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)]));a.download='tim-area-backup.json';a.click()}
+async function imp(f){if(!f)return;try{S=Object.assign(S,JSON.parse(await f.text()));save();fillM();R()}catch(e){alert('File non valido')}}
+/* Sync Firestore REST (gratuito, piano Spark) */
+async function sync(q){const c=S.cfg;if(!q){c.pid=$('#fb1').value.trim();c.key=$('#fb2').value.trim();c.code=$('#fb3').value.trim();c.em=$('#fb4').value.trim()}save();const pw=q?'':($('#fb5')||{}).value;const out=t=>{const e=$('#sm');if(e)e.textContent=t};
+ if(!c.pid||!c.key||!c.code||!c.em)return out('Compila tutti i campi');const B=`https://firestore.googleapis.com/v1/projects/${c.pid}/databases/(default)/documents/tim_${c.code}`,K='key='+c.key;
+ try{out('Accesso…');const H={Authorization:'Bearer '+await getTok(pw),'Content-Type':'application/json'};out('Scarico…');let tok='',docs=[];do{const r=await fetch(`${B}?pageSize=300&${K}${tok?'&pageToken='+tok:''}`,{headers:H});if(!r.ok)throw new Error(r.status);const j=await r.json();(j.documents||[]).forEach(d=>docs.push([d.name.split('/').pop(),JSON.parse(d.fields.d.stringValue)]));tok=j.nextPageToken}while(tok);
+  for(const [id,v] of docs){if(id=='sh')Object.assign(S.shops,v,S.shops);else if(id=='pl'){for(const k in v)if(!S.plans[k]||v[k].u>S.plans[k].u)S.plans[k]=v[k]}else{const ty=id.split('_')[0];if(!S[ty])continue;const mp=new Map(S[ty].map(x=>[x.k,x]));v.forEach(r=>{const o=mp.get(r.k);if(!o||r.u>o.u)mp.set(r.k,r)});S[ty]=[...mp.values()]}}
+  out('Invio…');const put=(id,o)=>fetch(`${B}/${id}?${K}`,{method:'PATCH',headers:H,body:JSON.stringify({fields:{d:{stringValue:JSON.stringify(o)}}})}).then(r=>{if(!r.ok)throw new Error(r.status)});
+  const jobs=[put('sh',S.shops),put('pl',S.plans)];['nip','en','tp'].forEach(ty=>{for(let i=0;i*250<S[ty].length;i++)jobs.push(put(ty+'_'+i,S[ty].slice(i*250,i*250+250)))});await Promise.all(jobs);
+  S.lastSync=Date.now();save();fillM();out('✔ Sincronizzato');R()}catch(e){out('Errore sync: '+e.message)}}
+async function getTok(pw){const c=S.cfg,K='key='+c.key;let r,j;
+ if(pw){r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?'+K,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:c.em,password:pw,returnSecureToken:true})});j=await r.json();if(!r.ok)throw new Error('email o password errate');c.rt=j.refreshToken;save();return j.idToken}
+ if(!c.rt)throw new Error('inserisci la password');
+ r=await fetch('https://securetoken.googleapis.com/v1/token?'+K,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(c.rt)});j=await r.json();if(!r.ok)throw new Error('sessione scaduta, reinserisci la password');return j.id_token}
+/* Shell */
+const go=c=>{V.tab='shops';V.shop=c;R();scrollTo(0,0)};
+function fillM(){const ms=months();$('#mk').innerHTML='<option value="">Tutti i mesi</option>'+ms.map(m=>`<option ${m==V.mk?'selected':''}>${m}</option>`).join('')}
+function R(){$('#nv').innerHTML=TABS.map(([k,i,l])=>`<button class="${V.tab==k?'on':''}" onclick="V.tab='${k}';V.shop=null;R()"><span>${i}</span>${l}</button>`).join('');
+ $('#v').innerHTML=V.tab=='home'?home():V.tab=='shops'?(V.shop?shop(V.shop):shops()):V.tab=='cross'?cross():V.tab=='plan'?plan():data()}
+fillM();R();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
