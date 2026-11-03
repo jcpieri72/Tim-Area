@@ -21,6 +21,7 @@ button.p,select,input{font:inherit;padding:8px 10px;border-radius:10px;border:1p
 .f{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}.f label{font-size:12px;color:var(--m);display:block}.f input{width:100%}
 @media(min-width:700px){body{padding:0 0 0 84px}nav{top:0;bottom:0;right:auto;width:84px;flex-direction:column;justify-content:flex-start;padding-top:70px}nav button{flex:0;padding:14px 2px}header{margin-left:-84px;padding-left:98px}.k b{font-size:28px}}
 .pb{margin-bottom:12px}.pb label{font-size:12px;color:var(--m);display:block}.pbr{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.pb input,.pb select{width:100%}
+.dl{font-size:12px;font-weight:600;display:block;color:var(--m)}.dl.g{color:var(--ok)}.dl.b{color:var(--bad)}
 </style></head><body>
 <header><b>TIM · Area Manager</b></header>
 <main id="v"></main>
@@ -64,17 +65,25 @@ const maxDate=()=>[...S.nip,...S.en,...S.tp].reduce((m,r)=>r.d>m?r.d:m,'');
 const per=()=>V.f||V.t?{f:V.f||'0000-00-00',t:V.t||'9999-99-99'}:'';
 const inP=(r,p)=>!p||(typeof p=='string'?r.d.startsWith(p):r.d>=p.f&&r.d<=p.t);
 const lb=x=>x?x.split('-').reverse().join('/'):'…';
+const addD=(d,n)=>new Date(new Date(d).getTime()+n*864e5).toISOString().slice(0,10);
+function prevPer(){if(!V.f||!V.t)return null;const md=maxDate();let r;
+ if(V.mk){const[y,m]=V.mk.split('-').map(Number),py=m==1?y-1:y,pm=m==1?12:m-1,ps=py+'-'+String(pm).padStart(2,'0')+'-01',pl=new Date(py,pm,0).getDate(),e=(md>=V.f&&md<V.t)?md:V.t,dd=Math.min(+e.slice(8),pl);r={f:ps,t:ps.slice(0,8)+String(dd).padStart(2,'0')}}
+ else{const n=Math.round((new Date(V.t)-new Date(V.f))/864e5)+1;r={f:addD(V.f,-n),t:addD(V.f,-1)}}
+ return[...S.nip,...S.en,...S.tp].some(x=>x.d>=r.f&&x.d<=r.t)?r:null}
+function dl(v,p,o){o=o||{};if(p==null||v==null)return'';const d=Math.round((v-p)*10)/10;if(d==0)return'<span class="dl">= invariato</span>';
+ const up=d>0,good=o.bad?!up:up,s=(up?'+':'')+nf(d),x=o.pt?s+' pt':(p>0?s+' ('+(up?'+':'')+Math.round(d/p*100)+'%)':s+' (nuovo)');
+ return`<span class="dl ${good?'g':'b'}">${up?'▲':'▼'} ${x}</span>`}
 function setM(v){V.mk=v;if(v){const[y,m]=v.split('-').map(Number);V.f=v+'-01';V.t=v+'-'+String(new Date(y,m,0).getDate()).padStart(2,'0')}else{V.f=V.t=''}R()}
 function setR(k,v){V[k]=v;V.mk='';if(V.f&&V.t&&V.f>V.t){const x=V.f;V.f=V.t;V.t=x}R()}
 function pre(n){const md=maxDate();if(!md)return;V.t=md;V.f=new Date(new Date(md)-n*864e5).toISOString().slice(0,10);V.mk='';R()}
-function pbar(){if(V.tab=='data')return'';const ms=months(),md=maxDate(),cu=!V.mk&&(V.f||V.t);
- return`<div class="c pb"><div class="pbr"><div><label>Mese</label><select onchange="setM(this.value)"><option value="">${cu?'Periodo personalizzato':'Tutti i mesi'}</option>${ms.map(m=>`<option ${m==V.mk?'selected':''}>${m}</option>`).join('')}</select></div><div><label>Dal giorno</label><input type="date" value="${V.f}" max="${md}" onchange="setR('f',this.value)"></div><div><label>Al giorno</label><input type="date" value="${V.t}" max="${md}" onchange="setR('t',this.value)"></div></div><div class="chips"><button onclick="pre(0)">Ultimo giorno</button><button onclick="pre(6)">Ultimi 7 gg</button><button onclick="pre(29)">Ultimi 30 gg</button><button onclick="setM('')">Tutto</button></div><small>Periodo: ${V.f||V.t?lb(V.f)+' – '+lb(V.t):'tutti i dati'}${md?' · ultimo dato '+lb(md):''}</small></div>`}
+function pbar(){if(V.tab=='data')return'';const ms=months(),md=maxDate(),cu=!V.mk&&(V.f||V.t),pp=prevPer();
+ return`<div class="c pb"><div class="pbr"><div><label>Mese</label><select onchange="setM(this.value)"><option value="">${cu?'Periodo personalizzato':'Tutti i mesi'}</option>${ms.map(m=>`<option ${m==V.mk?'selected':''}>${m}</option>`).join('')}</select></div><div><label>Dal giorno</label><input type="date" value="${V.f}" max="${md}" onchange="setR('f',this.value)"></div><div><label>Al giorno</label><input type="date" value="${V.t}" max="${md}" onchange="setR('t',this.value)"></div></div><div class="chips"><button onclick="pre(0)">Ultimo giorno</button><button onclick="pre(6)">Ultimi 7 gg</button><button onclick="pre(29)">Ultimi 30 gg</button><button onclick="setM('')">Tutto</button></div><small>Periodo: ${V.f||V.t?lb(V.f)+' – '+lb(V.t):'tutti i dati'}${md?' · ultimo dato '+lb(md):''}${pp?' · variazioni rispetto al '+lb(pp.f)+' – '+lb(pp.t):(V.f&&V.t?' · nessun dato nel periodo precedente':(V.tab=='home'||V.tab=='shops'?' · scegli un mese o le due date per vedere le variazioni':''))}</small></div>`}
 /* Viste */
-function home(){const A=agg(per()),T=tot(A),ids=Object.keys(A).filter(c=>A[c].totF+A[c].totE+A[c].tp>0).sort((a,b)=>A[b].fisso-A[a].fisso);
+function home(){const PV=prevPer(),A=agg(per()),T=tot(A),TP=PV?tot(agg({f:PV.f,t:PV.t})):null,ids=Object.keys(A).filter(c=>A[c].totF+A[c].totE+A[c].tp>0).sort((a,b)=>A[b].fisso-A[a].fisso);
  if(!ids.length)return`<div class="c"><h3>Nessun dato</h3>Vai su ⚙️ Dati e carica i CSV (energia, nip_ull, telepass).</div>`;
- const K=(l,v,x)=>`<div class="c k ${x||''}"><small>${l}</small><b>${v}</b></div>`,mx=k=>Math.max(...ids.map(c=>A[c][k]),1);
+ const D=k=>TP?dl(T[k],TP[k]):'',R2=(n,d,b)=>TP?dl(pc(T[n],T[d]),pc(TP[n],TP[d]),{pt:1,bad:b}):'',K=(l,v,x,dd)=>`<div class="c k ${x||''}"><small>${l}</small><b>${v}</b>${dd||''}</div>`,mx=k=>Math.max(...ids.map(c=>A[c][k]),1);
  const al=alerts(A,ids);
- return`<div class="g">${K('Fissi (NIP+ULL)',nf(T.fisso))}${K('NIP',nf(T.nip))}${K('ULL',nf(T.ull))}${K('Luce',nf(T.luce),'r')}${K('Gas',nf(T.gas),'r')}${K('Luce + Gas (totale)',nf(T.en),'r')}${K('Telepass',nf(T.tp))}${K('Energia ogni 100 fissi',nf(pc(T.en,T.fisso)),'r')}${K('Telepass ogni 100 fissi',nf(pc(T.tp,T.fisso)))}${K('% annullati fissi',fp(pc(T.anF,T.totF)))}${K('% annullati energia',fp(pc(T.anE,T.totE)))}</div>
+ return`<div class="g">${K('Fissi (NIP+ULL)',nf(T.fisso),'',D('fisso'))}${K('NIP',nf(T.nip),'',D('nip'))}${K('ULL',nf(T.ull),'',D('ull'))}${K('Luce',nf(T.luce),'r',D('luce'))}${K('Gas',nf(T.gas),'r',D('gas'))}${K('Luce + Gas (totale)',nf(T.en),'r',D('en'))}${K('Telepass',nf(T.tp),'',D('tp'))}${K('Energia ogni 100 fissi',nf(pc(T.en,T.fisso)),'r',R2('en','fisso'))}${K('Telepass ogni 100 fissi',nf(pc(T.tp,T.fisso)),'',R2('tp','fisso'))}${K('% annullati fissi',fp(pc(T.anF,T.totF)),'',R2('anF','totF',1))}${K('% annullati energia',fp(pc(T.anE,T.totE)),'',R2('anE','totE',1))}</div>
  <div class="g2" style="margin-top:12px"><div class="c"><h3>⚠️ Da controllare</h3>${al.join('')||'<span class="ok">Tutto nella norma</span>'}</div>
  <div class="c"><h3>📈 Trend mensile</h3>${months().map(m=>{const t=tot(agg(m));return`<div class="row"><span class="n">${m}</span><span class="v">${t.fisso}</span><small>fissi</small><span class="v">${t.en}</span><small>en.</small><span class="v">${t.tp}</span><small>tp</small></div>`}).join('')}</div></div>
  <div class="g2" style="margin-top:12px">${[['fisso','Fissi (NIP+ULL)',''],['en','Energia','var(--r)'],['tp','Telepass','#00A3E0']].map(([k,l,c])=>`<div class="c"><h3>${l} per negozio</h3>${[...ids].sort((a,b)=>A[b][k]-A[a][k]).map(i=>`<div class="row" onclick="go('${i}')"><span class="n">${nm(i)}</span>${bar(A[i][k],mx(k),c)}<span class="v">${A[i][k]}</span></div>`).join('')}</div>`).join('')}</div>`}
@@ -85,19 +94,19 @@ function alerts(A,ids){const o=[],md=maxDate(),last={};[...S.nip,...S.en,...S.tp
   if(a.totF>=8&&pc(a.anF,a.totF)>=25)o.push(L.replace('%C','bad')+`annullati fissi ${fp(pc(a.anF,a.totF))}</div>`);
   if(a.totE>=8&&pc(a.anE,a.totE)>=25)o.push(L.replace('%C','bad')+`annullati energia ${fp(pc(a.anE,a.totE))}</div>`);
   if(last[c]&&(new Date(md)-new Date(last[c]))/864e5>14)o.push(L.replace('%C','')+`nessun ordine dal ${last[c].split('-').reverse().join('/')}</div>`)});return o.slice(0,40)}
-function shops(){const A=agg(per()),T=tot(A);const cols=[['fisso','Fissi'],['nip','NIP'],['ull','ULL'],['luce','Luce'],['gas','Gas'],['tp','Tp'],['enf','En/Fissi'],['tpf','Tp/Fissi'],['an','Ann.%']];
- const val=(c,k)=>{const a=A[c];return k=='enf'?pc(a.en,a.fisso):k=='tpf'?pc(a.tp,a.fisso):k=='an'?pc(a.anF+a.anE,a.totF+a.totE):a[k]};
- const ids=Object.keys(A).sort((a,b)=>((val(b,V.sort)??-1)-(val(a,V.sort)??-1))*-V.dir*-1);
+function shops(){const PV=prevPer(),A=agg(per()),P=PV?agg({f:PV.f,t:PV.t}):null,T=tot(A),TP=P?tot(P):null;const cols=[['fisso','Fissi'],['nip','NIP'],['ull','ULL'],['luce','Luce'],['gas','Gas'],['tp','Tp'],['enf','En/Fissi'],['tpf','Tp/Fissi'],['an','Ann.%']].concat(P?[['dF','Δ Fissi'],['dE','Δ En.']]:[]);
+ const val=(c,k)=>{const a=A[c];if(k=='dF'||k=='dE'){const b=P&&P[c];return b?(k=='dF'?a.fisso-b.fisso:a.en-b.en):null}return k=='enf'?pc(a.en,a.fisso):k=='tpf'?pc(a.tp,a.fisso):k=='an'?pc(a.anF+a.anE,a.totF+a.totE):a[k]};
+ const ids=Object.keys(A).sort((a,b)=>((val(b,V.sort)??-1)-(val(a,V.sort)??-1))*-V.dir);
  const av={enf:pc(T.en,T.fisso),tpf:pc(T.tp,T.fisso)};
  return`<div class="c"><h3>Tutti i negozi · tocca l'intestazione per ordinare</h3><div class="sc"><table><tr><th>Negozio</th>${cols.map(([k,l])=>`<th onclick="V.sort='${k}';V.dir=-V.dir||-1;R()">${l}${V.sort==k?(V.dir<0?' ▼':' ▲'):''}</th>`).join('')}</tr>
- ${ids.map(c=>`<tr onclick="go('${c}')"><td>${nm(c)}</td>${cols.map(([k])=>{const v=val(c,k);return`<td class="${k=='enf'||k=='tpf'?cl(v,av[k]):k=='an'&&v>=25?'bad':''}">${k=='enf'||k=='tpf'||k=='an'?fp(v):v}</td>`}).join('')}</tr>`).join('')}
- <tr><td><b>TOTALE</b></td><td><b>${T.fisso}</b></td><td>${T.nip}</td><td>${T.ull}</td><td>${T.luce}</td><td>${T.gas}</td><td>${T.tp}</td><td>${fp(av.enf)}</td><td>${fp(av.tpf)}</td><td>${fp(pc(T.anF+T.anE,T.totF+T.totE))}</td></tr></table></div></div>`}
-function shop(c){const A=agg(per()),a=A[c],T=tot(A),s=S.shops[c]||{};
+ ${ids.map(c=>`<tr onclick="go('${c}')"><td>${nm(c)}</td>${cols.map(([k])=>{const v=val(c,k);return`<td class="${k=='enf'||k=='tpf'?cl(v,av[k]):k=='an'&&v>=25?'bad':(k=='dF'||k=='dE')?(v>0?'ok':v<0?'bad':''):''}">${k=='enf'||k=='tpf'||k=='an'?fp(v):k=='dF'||k=='dE'?(v==null?'–':v>0?'▲ +'+v:v<0?'▼ '+v:'='):v}</td>`}).join('')}</tr>`).join('')}
+ <tr><td><b>TOTALE</b></td><td><b>${T.fisso}</b></td><td>${T.nip}</td><td>${T.ull}</td><td>${T.luce}</td><td>${T.gas}</td><td>${T.tp}</td><td>${fp(av.enf)}</td><td>${fp(av.tpf)}</td><td>${fp(pc(T.anF+T.anE,T.totF+T.totE))}</td>${P?`<td>${T.fisso-TP.fisso}</td><td>${T.en-TP.en}</td>`:''}</tr></table></div></div>`}
+function shop(c){const PV=prevPer(),A=agg(per()),a=A[c],T=tot(A),b=PV?agg({f:PV.f,t:PV.t})[c]:null,s=S.shops[c]||{};
  const mm=months().map(m=>[m,agg(m)[c]]),sv={};S.nip.filter(r=>r.s==c&&!r.x&&inP(r,per())).forEach(r=>{sv[r.v]=(sv[r.v]||0)+1});
  const ex={};S.nip.filter(r=>r.s==c&&!r.x&&inP(r,per())).forEach(r=>{ex[r.o]=(ex[r.o]||0)+1});
  const R_=(l,v,avg)=>`<div class="row"><span class="n">${l}</span><span class="v ${cl(v,avg)}">${fp(v)}</span><small>media area ${fp(avg)}</small></div>`;
  return`<button class="p" onclick="V.shop=null;R()">← Tutti i negozi</button><h2>${esc(s.n)} <small>${esc(s.c)} · cod. ${c}</small></h2>
- <div class="g"><div class="c k"><small>Fissi</small><b>${a.fisso}</b></div><div class="c k"><small>NIP / ULL</small><b>${a.nip} / ${a.ull}</b></div><div class="c k r"><small>Luce / Gas</small><b>${a.luce} / ${a.gas}</b></div><div class="c k"><small>Telepass</small><b>${a.tp}</b></div></div>
+ <div class="g"><div class="c k"><small>Fissi</small><b>${a.fisso}</b>${b?dl(a.fisso,b.fisso):''}</div><div class="c k"><small>NIP / ULL</small><b>${a.nip} / ${a.ull}</b></div><div class="c k r"><small>Luce / Gas</small><b>${a.luce} / ${a.gas}</b>${b?dl(a.en,b.en):''}</div><div class="c k"><small>Telepass</small><b>${a.tp}</b>${b?dl(a.tp,b.tp):''}</div></div>
  <div class="g2" style="margin-top:12px"><div class="c"><h3>Confronto con la media area</h3>${R_('Energia ogni 100 fissi',pc(a.en,a.fisso),pc(T.en,T.fisso))}${R_('Luce ogni 100 fissi',pc(a.luce,a.fisso),pc(T.luce,T.fisso))}${R_('Gas ogni 100 fissi',pc(a.gas,a.fisso),pc(T.gas,T.fisso))}${R_('Telepass ogni 100 fissi',pc(a.tp,a.fisso),pc(T.tp,T.fisso))}${R_('ULL su fissi',pc(a.ull,a.fisso),pc(T.ull,T.fisso))}<div class="row"><span class="n">Annullati fissi / energia</span><span class="v">${fp(pc(a.anF,a.totF))} / ${fp(pc(a.anE,a.totE))}</span></div></div>
  <div class="c"><h3>Andamento mensile</h3><table><tr><th>Mese</th><th>Fissi</th><th>Luce</th><th>Gas</th><th>Tp</th><th>En/Fissi</th></tr>${mm.map(([m,x])=>`<tr><td>${m}</td><td>${x.fisso}</td><td>${x.luce}</td><td>${x.gas}</td><td>${x.tp}</td><td>${fp(pc(x.en,x.fisso))}</td></tr>`).join('')}</table></div>
  <div class="c"><h3>Mix tecnologie fissi</h3>${Object.entries(sv).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`<div class="row"><span class="n">${esc(k)}</span>${bar(v,a.fisso)}<span class="v">${v}</span></div>`).join('')}</div>
